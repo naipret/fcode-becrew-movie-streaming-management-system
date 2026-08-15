@@ -1,0 +1,30 @@
+# Auto detect text files and perform LF normalization on checkout
+* text=auto eol=lf
+
+# Explicit text files
+*.java text diff=java eol=lf
+*.xml text eol=lf
+*.md text eol=lf
+*.csv text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+*.properties text eol=lf
+.editorconfig text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+LICENSE text eol=lf
+
+# Shell scripts & Maven wrapper executable format
+mvnw text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary files
+*.jar binary
+*.dat binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary

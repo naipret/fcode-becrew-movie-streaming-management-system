@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / URL-encoded files
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# Virtual machines
+*.ipr
+*.iws
+*.iml
+
+# IntelliJ IDEA
+.idea/
+out/
+
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+# Visual Studio Code
+.vscode/
+
+# Temporary / Backup / Logs
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# OS / Crash dumps
+hs_err_pid*
+replay_pid*
