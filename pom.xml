@@ -26,8 +26,8 @@
         <!-- Plugin Versions -->
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.1.2</maven-surefire-plugin.version>
-        <maven-checkstyle-plugin.version>3.3.0</maven-checkstyle-plugin.version>
-        <checkstyle.version>10.12.1</checkstyle.version>
+        <maven-checkstyle-plugin.version>3.1.2</maven-checkstyle-plugin.version>
+        <checkstyle.version>9.3</checkstyle.version>
         <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
         <exec-maven-plugin.version>3.1.0</exec-maven-plugin.version>
     </properties>
