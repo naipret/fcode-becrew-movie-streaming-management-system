@@ -3,6 +3,7 @@ package com.moviestreaming.service;
 import com.moviestreaming.exception.DuplicateEntityException;
 import com.moviestreaming.exception.EntityNotFoundException;
 import com.moviestreaming.exception.ValidationException;
+import com.moviestreaming.model.Category;
 import com.moviestreaming.model.Movie;
 import com.moviestreaming.repository.CategoryRepository;
 import com.moviestreaming.repository.MovieRepository;
@@ -13,25 +14,35 @@ import java.util.stream.Collectors;
 
 /**
  * Service managing Movie CRUD operations, business rules, category foreign key checks,
- * and view/favorite counters.
+ * view/favorite counters, and real-time in-memory indexing synchronization.
  */
 public class MovieService {
 
     private final MovieRepository movieRepository;
     private final CategoryRepository categoryRepository;
+    private final IndexingService indexingService;
     private final MovieValidator validator;
 
     public MovieService(MovieRepository movieRepository, CategoryRepository categoryRepository) {
+        this(movieRepository, categoryRepository, new IndexingService());
+    }
+
+    public MovieService(MovieRepository movieRepository, CategoryRepository categoryRepository,
+                        IndexingService indexingService) {
         if (movieRepository == null || categoryRepository == null) {
             throw new IllegalArgumentException("Repositories must not be null");
         }
         this.movieRepository = movieRepository;
         this.categoryRepository = categoryRepository;
+        this.indexingService = (indexingService != null) ? indexingService : new IndexingService();
         this.validator = new MovieValidator();
+
+        // Initialize inverted index with current data
+        this.indexingService.initialize(this.movieRepository.findAll(), this.categoryRepository.findAll());
     }
 
     /**
-     * Creates and persists a new Movie with validation and auto-assigned ID if missing.
+     * Creates and persists a new Movie with validation, auto-assigned ID, and real-time indexing.
      *
      * @param movie the Movie entity to create
      * @return the created Movie
@@ -45,9 +56,9 @@ public class MovieService {
         validator.validate(movie);
 
         // Check category exists (Foreign Key check)
-        if (!categoryRepository.existsById(movie.getCategoryId())) {
-            throw new ValidationException(String.format("Category with ID '%s' does not exist.", movie.getCategoryId()));
-        }
+        Category category = categoryRepository.findById(movie.getCategoryId())
+                .orElseThrow(() -> new ValidationException(
+                        String.format("Category with ID '%s' does not exist.", movie.getCategoryId())));
 
         // Check uniqueness of Title + ReleaseYear
         checkTitleAndYearUniqueness(movie.getTitle(), movie.getReleaseYear(), null);
@@ -57,11 +68,16 @@ public class MovieService {
             movie.setId(generateNextId());
         }
 
-        return movieRepository.save(movie);
+        Movie saved = movieRepository.save(movie);
+
+        // Sync inverted index
+        indexingService.indexMovie(saved, category);
+
+        return saved;
     }
 
     /**
-     * Updates an existing Movie entity.
+     * Updates an existing Movie entity and refreshes index.
      *
      * @param movie the updated movie entity
      * @return the saved Movie
@@ -71,22 +87,28 @@ public class MovieService {
             throw new ValidationException("Movie and Movie ID cannot be null for update");
         }
 
-        Movie existing = movieRepository.findById(movie.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Movie", movie.getId()));
+        if (!movieRepository.existsById(movie.getId())) {
+            throw new EntityNotFoundException("Movie", movie.getId());
+        }
 
         validator.validate(movie);
 
-        if (!categoryRepository.existsById(movie.getCategoryId())) {
-            throw new ValidationException(String.format("Category with ID '%s' does not exist.", movie.getCategoryId()));
-        }
+        Category category = categoryRepository.findById(movie.getCategoryId())
+                .orElseThrow(() -> new ValidationException(
+                        String.format("Category with ID '%s' does not exist.", movie.getCategoryId())));
 
         checkTitleAndYearUniqueness(movie.getTitle(), movie.getReleaseYear(), movie.getId());
 
-        return movieRepository.save(movie);
+        Movie saved = movieRepository.save(movie);
+
+        // Sync inverted index
+        indexingService.indexMovie(saved, category);
+
+        return saved;
     }
 
     /**
-     * Deletes a Movie by its ID.
+     * Deletes a Movie by its ID and evicts from inverted index.
      *
      * @param id the movie ID
      */
@@ -95,6 +117,7 @@ public class MovieService {
             throw new EntityNotFoundException("Movie", id);
         }
         movieRepository.deleteById(id);
+        indexingService.evictMovie(id);
     }
 
     /**
@@ -165,6 +188,15 @@ public class MovieService {
             movie.setFavoriteCount(Math.max(0, movie.getFavoriteCount() - 1));
             movieRepository.save(movie);
         });
+    }
+
+    /**
+     * Returns the internal IndexingService instance.
+     *
+     * @return IndexingService
+     */
+    public IndexingService getIndexingService() {
+        return indexingService;
     }
 
     private void checkTitleAndYearUniqueness(String title, int releaseYear, String excludeId) {
