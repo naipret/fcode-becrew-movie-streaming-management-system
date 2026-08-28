@@ -6,6 +6,9 @@ import com.moviestreaming.config.AppConstants;
 import com.moviestreaming.exception.DuplicateEntityException;
 import com.moviestreaming.exception.EntityNotFoundException;
 import com.moviestreaming.exception.ValidationException;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -46,8 +49,15 @@ class AppTest {
     }
 
     @Test
-    @DisplayName("Should run main bootstrap method without errors")
+    @DisplayName("Should run main bootstrap method and exit gracefully")
     void shouldExecuteMainMethod() {
-        App.main(new String[]{});
+        InputStream originalIn = System.in;
+        try {
+            ByteArrayInputStream in = new ByteArrayInputStream("0\n".getBytes(StandardCharsets.UTF_8));
+            System.setIn(in);
+            App.main(new String[]{});
+        } finally {
+            System.setIn(originalIn);
+        }
     }
 }
