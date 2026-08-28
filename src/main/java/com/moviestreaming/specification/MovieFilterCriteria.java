@@ -16,7 +16,8 @@ public class MovieFilterCriteria {
     private Integer maxDuration;
     private String titleKeyword;
 
-    public MovieFilterCriteria() {}
+    public MovieFilterCriteria() {
+    }
 
     public String getCategoryId() {
         return categoryId;
